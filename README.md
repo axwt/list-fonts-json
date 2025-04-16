@@ -148,11 +148,3 @@ For the `find` and `find-best` commands, the following filter options are availa
 * `--italic` - Filter for italic fonts
 * `--weight=<weight>` - Filter by weight (100-900)
 * `--width=<width>` - Filter by width (1-9)
-
-## Implemented Methods
-
-1. **getAvailableFonts()** - Returns an array of all available fonts
-2. **findFonts(query)** - Returns an array of fonts matching the query
-3. **findFont(query)** - Returns the single best matching font for the query
-4. **substituteFont(postscriptName, string)** - Returns a font that can display the given string
-5. **getAvailableFontFamilies()** - Returns a list of all available font family names

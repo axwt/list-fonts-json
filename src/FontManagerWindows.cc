@@ -233,12 +233,12 @@ FontDescriptor *substituteFont(const char *postscriptName, const char *string) {
       int familyNameLen = 0;
       
       // Search in all families
-      for (int i = 0; i < collection->GetFontFamilyCount(); i++) {
+      for (unsigned int i = 0; i < collection->GetFontFamilyCount(); i++) {
         IDWriteFontFamily *family = NULL;
         hr = collection->GetFontFamily(i, &family);
         
         if (SUCCEEDED(hr)) {
-          for (int j = 0; j < family->GetFontCount(); j++) {
+          for (unsigned int j = 0; j < family->GetFontCount(); j++) {
             IDWriteFont *font = NULL;
             hr = family->GetFont(j, &font);
             
@@ -264,7 +264,9 @@ FontDescriptor *substituteFont(const char *postscriptName, const char *string) {
                   if (SUCCEEDED(hr)) {
                     const size_t textLength = wcslen(wstr);
                     UINT16 *glyphIndices = new UINT16[textLength];
-                    hr = face->GetGlyphIndices((UINT32*)wstr, textLength, glyphIndices);
+                    // Cast with check to ensure no data loss
+                    UINT32 safeLength = (textLength > UINT32_MAX) ? UINT32_MAX : static_cast<UINT32>(textLength);
+                    hr = face->GetGlyphIndices((UINT32*)wstr, safeLength, glyphIndices);
                     
                     bool canDisplay = true;
                     for (size_t k = 0; k < textLength; k++) {
@@ -322,9 +324,12 @@ FontDescriptor *substituteFont(const char *postscriptName, const char *string) {
       if (SUCCEEDED(hr)) {
         // Create a text layout for font fallback
         IDWriteTextLayout *textLayout = NULL;
+        // Cast size_t to UINT32 safely
+        const size_t textLength = wcslen(wstr);
+        UINT32 safeLength = (textLength > UINT32_MAX) ? UINT32_MAX : static_cast<UINT32>(textLength);
         hr = factory->CreateTextLayout(
           wstr,
-          wcslen(wstr),
+          safeLength,
           textFormat,
           1000.0f, // max width
           100.0f,  // max height
