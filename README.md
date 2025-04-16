@@ -93,12 +93,12 @@ Make sure you have CMake installed and a "Visual Studio Visual C/C++ Build Tools
 From PowerShell run:
 
 ```
-mkdir build
-cd build
-cmake ..
+  mkdir build
+  cd build
+  cmake .. -G "Visual Studio 16 2019" -A x64
 ```
 
-Now open up a suitable "Visual C/C++ 2015 x64 Native Build Tools Command Promp", go to the build directory and run:
+Now open up a suitable "Developer Command Promp", go to the build directory and run:
 
 ```
 msbuild ALL_BUILD.vcxproj /p:Configuration=Release
