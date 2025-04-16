@@ -1,8 +1,8 @@
 # list-fonts-json
 
-This is a tiny cross-platform utility which simply lists the available installed fonts in a JSON format to stdout.
+This is a tiny cross-platform utility which lists the available installed fonts in a JSON format to stdout. It now implements all the features from the original [font-manager](https://github.com/foliojs/font-manager) NodeJS module.
 
-This code is derived from the [font-manager](https://github.com/foliojs/font-manager) NodeJS module, but makes it a separate executable and not a node module which needs to be rebuilt everytime you install it or change node versions. It is quite simple and only implements font-manager's `getAvailableFonts()` method. 
+This code is derived from the [font-manager](https://github.com/foliojs/font-manager) NodeJS module, but makes it a separate executable and not a node module which needs to be rebuilt everytime you install it or change node versions.
 
 Example output:
 
@@ -33,7 +33,7 @@ The output is a JSON array of objects where each object describes a font with th
 * **oblique** - (boolean) Whether the font is oblique.
 * **monospace** - (boolean) Whether the font is monospace.
 
-Note that italic, oblique and monospace fields tend not to be reliablely reported by most operating systems.
+Note that italic, oblique and monospace fields tend not to be reliably reported by most operating systems.
 
 
 ## Platforms
@@ -52,10 +52,10 @@ The build system is based on [CMake](https://cmake.org/). Make sure you have a r
 Make sure you have Xcode's C/C++ compiler installed, and then from the root of this git repository run:
 
 ```
-  mkdir build
-  cd build
-  cmake -DCMAKE_BUILD_TYPE=Release ..
-  make
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
 ```
 The executable is left in the build folder.
 
@@ -65,10 +65,10 @@ The executable is left in the build folder.
 First ensure you have a working C/C++ compiler and the fontconfig development files installed. Now run:
 
 ```
-  mkdir build
-  cd build
-  cmake -DCMAKE_BUILD_TYPE=Release ..
-  make
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
 ```
 The executable is left in the build directory.
 
@@ -80,7 +80,7 @@ It is also possible to build the Linux binary via Docker. That advantage is that
 Run the script:
 
 ```
-  ./build_linux_in_docker.sh
+./build_linux_in_docker.sh
 ```
 
 The executable is left in the build directory.
@@ -93,15 +93,15 @@ Make sure you have CMake installed and a "Visual Studio Visual C/C++ Build Tools
 From PowerShell run:
 
 ```
-  mkdir build
-  cd build
-  cmake ..
+mkdir build
+cd build
+cmake ..
 ```
 
 Now open up a suitable "Visual C/C++ 2015 x64 Native Build Tools Command Promp", go to the build directory and run:
 
 ```
-    msbuild ALL_BUILD.vcxproj /p:Configuration=Release
+msbuild ALL_BUILD.vcxproj /p:Configuration=Release
 ```
 The exe should now be in the `Release/` directory.
 
@@ -112,3 +112,47 @@ MIT
 
 Simon Edwards
 <simon@simonzone.com>
+
+## Usage
+
+The tool supports multiple commands for different font-related operations:
+
+```bash
+# List all available fonts (default behavior)
+list-fonts-json
+
+# Or explicitly specify the command
+list-fonts-json list
+
+# Get a list of all font families
+list-fonts-json families
+
+# Find fonts matching specific criteria
+list-fonts-json find --family="Arial" --italic --weight=700
+
+# Find the best matching font
+list-fonts-json find-best --family="Helvetica" --weight=400
+
+# Find a font that can substitute for another when displaying specific text
+list-fonts-json substitute "Arial-Regular" "こんにちは"
+```
+
+### Command Line Options
+
+For the `find` and `find-best` commands, the following filter options are available:
+
+* `--family=<name>` - Filter by font family name
+* `--style=<style>` - Filter by font style
+* `--postscript=<name>` - Filter by PostScript name
+* `--monospace` - Filter for monospace fonts
+* `--italic` - Filter for italic fonts
+* `--weight=<weight>` - Filter by weight (100-900)
+* `--width=<width>` - Filter by width (1-9)
+
+## Implemented Methods
+
+1. **getAvailableFonts()** - Returns an array of all available fonts
+2. **findFonts(query)** - Returns an array of fonts matching the query
+3. **findFont(query)** - Returns the single best matching font for the query
+4. **substituteFont(postscriptName, string)** - Returns a font that can display the given string
+5. **getAvailableFontFamilies()** - Returns a list of all available font family names

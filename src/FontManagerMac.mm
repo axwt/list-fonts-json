@@ -227,28 +227,29 @@ CTFontDescriptorRef getFontDescriptor(FontDescriptor *desc) {
 //   return res;
 // }
 
-// FontDescriptor *substituteFont(char *postscriptName, char *string) {
-//   FontDescriptor *res = NULL;
+FontDescriptor *substituteFont(const char *postscriptName, const char *string) {
+  FontDescriptor *res = NULL;
   
-//   // create a font descriptor to find the font by its postscript name
-//   // we don't use CTFontCreateWithName because that supports font
-//   // names other than the postscript name but prints warnings.
-//   NSString *ps = [NSString stringWithUTF8String:postscriptName];
-//   NSDictionary *attrs = @{(id)kCTFontNameAttribute: ps};
-//   CTFontDescriptorRef descriptor = CTFontDescriptorCreateWithAttributes((CFDictionaryRef) attrs);
-//   CTFontRef font = CTFontCreateWithFontDescriptor(descriptor, 12.0, NULL);
+  // create a font descriptor to find the font by its postscript name
+  // we don't use CTFontCreateWithName because that supports font
+  // names other than the postscript name but prints warnings.
+  NSString *ps = [NSString stringWithUTF8String:postscriptName];
+  NSDictionary *attrs = @{(id)kCTFontNameAttribute: ps};
+  CTFontDescriptorRef descriptor = CTFontDescriptorCreateWithAttributes((CFDictionaryRef) attrs);
+  CTFontRef font = CTFontCreateWithFontDescriptor(descriptor, 12.0, NULL);
   
-//   // find a substitute font that support the given characters
-//   NSString *str = [NSString stringWithUTF8String:string];
-//   CTFontRef substituteFont = CTFontCreateForString(font, (CFStringRef) str, CFRangeMake(0, [str length]));
-//   CTFontDescriptorRef substituteDescriptor = CTFontCopyFontDescriptor(substituteFont);
+  // find a substitute font that support the given characters
+  NSString *str = [NSString stringWithUTF8String:string];
+  CTFontRef substituteFont = CTFontCreateForString(font, (CFStringRef) str, CFRangeMake(0, [str length]));
+  CTFontDescriptorRef substituteDescriptor = CTFontCopyFontDescriptor(substituteFont);
   
-//   // finally, create and return a result object for this substitute font
-//   res = createFontDescriptor(substituteDescriptor);
+  // finally, create and return a result object for this substitute font
+  res = createFontDescriptor(substituteDescriptor);
   
-//   CFRelease(font);
-//   CFRelease(substituteFont);
-//   CFRelease(substituteDescriptor);
+  CFRelease(font);
+  CFRelease(substituteFont);
+  CFRelease(substituteDescriptor);
+  CFRelease(descriptor);
   
-//   return res;
-// }
+  return res;
+}

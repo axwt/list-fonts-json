@@ -161,3 +161,54 @@ ResultSet *getAvailableFonts() {
 
   return res;
 }
+
+FontDescriptor *substituteFont(const char *postscriptName, const char *string) {
+  FcInit();
+  FontDescriptor *result = NULL;
+  
+  // Create a pattern with the original postscript name
+  FcPattern *pattern = FcPatternCreate();
+  if (postscriptName) {
+    FcPatternAddString(pattern, FC_POSTSCRIPT_NAME, (FcChar8 *) postscriptName);
+  }
+  
+  // Create a charset from the string
+  FcCharSet *charset = FcCharSetCreate();
+  FcBool hasMissingGlyphs = FcFalse;
+  
+  // Add each codepoint to the charset
+  const char *p = string;
+  while (*p) {
+    FcChar32 c;
+    int len = FcUtf8ToUcs4((FcChar8 *)p, &c, strlen(p));
+    if (len <= 0) {
+      // Invalid UTF-8 sequence - skip this character
+      p++;
+      continue;
+    }
+    
+    FcCharSetAddChar(charset, c);
+    p += len;
+  }
+  
+  // Add the charset to the pattern
+  FcPatternAddCharSet(pattern, FC_CHARSET, charset);
+  
+  // Configure the matching
+  FcConfigSubstitute(NULL, pattern, FcMatchPattern);
+  FcDefaultSubstitute(pattern);
+  
+  // Find a matching font
+  FcResult res;
+  FcPattern *match = FcFontMatch(NULL, pattern, &res);
+  
+  if (match) {
+    result = createFontDescriptor(match);
+    FcPatternDestroy(match);
+  }
+  
+  FcCharSetDestroy(charset);
+  FcPatternDestroy(pattern);
+  
+  return result;
+}

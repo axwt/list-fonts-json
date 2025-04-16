@@ -185,3 +185,219 @@ ResultSet *getAvailableFonts() {
 
   return res;
 }
+
+FontDescriptor *substituteFont(const char *postscriptName, const char *string) {
+  FontDescriptor *result = NULL;
+  
+  // Create DirectWrite factory
+  IDWriteFactory *factory = NULL;
+  HRESULT hr = DWriteCreateFactory(
+    DWRITE_FACTORY_TYPE_SHARED,
+    __uuidof(IDWriteFactory),
+    reinterpret_cast<IUnknown**>(&factory)
+  );
+  
+  if (FAILED(hr)) {
+    return NULL;
+  }
+  
+  // Convert the input string to UTF-16
+  int wstrLen = MultiByteToWideChar(CP_UTF8, 0, string, -1, NULL, 0);
+  if (wstrLen <= 0) {
+    factory->Release();
+    return NULL;
+  }
+  
+  WCHAR *wstr = new WCHAR[wstrLen];
+  MultiByteToWideChar(CP_UTF8, 0, string, -1, wstr, wstrLen);
+  
+  // Convert the postscript name to UTF-16
+  WCHAR *fontNameW = NULL;
+  if (postscriptName) {
+    int nameLen = MultiByteToWideChar(CP_UTF8, 0, postscriptName, -1, NULL, 0);
+    if (nameLen > 0) {
+      fontNameW = new WCHAR[nameLen];
+      MultiByteToWideChar(CP_UTF8, 0, postscriptName, -1, fontNameW, nameLen);
+    }
+  }
+  
+  // First, try to get the specified font
+  IDWriteFontCollection *collection = NULL;
+  hr = factory->GetSystemFontCollection(&collection);
+  
+  if (SUCCEEDED(hr)) {
+    if (fontNameW) {
+      // Find original font by postscript name
+      UINT32 fontIndex = 0;
+      BOOL exists = FALSE;
+      int familyNameLen = 0;
+      
+      // Search in all families
+      for (int i = 0; i < collection->GetFontFamilyCount(); i++) {
+        IDWriteFontFamily *family = NULL;
+        hr = collection->GetFontFamily(i, &family);
+        
+        if (SUCCEEDED(hr)) {
+          for (int j = 0; j < family->GetFontCount(); j++) {
+            IDWriteFont *font = NULL;
+            hr = family->GetFont(j, &font);
+            
+            if (SUCCEEDED(hr)) {
+              // Check if this is the requested font by postscript name
+              IDWriteLocalizedStrings *names = NULL;
+              hr = font->GetInformationalStrings(
+                DWRITE_INFORMATIONAL_STRING_POSTSCRIPT_NAME,
+                &names,
+                &exists
+              );
+              
+              if (SUCCEEDED(hr) && exists && names) {
+                WCHAR psName[256] = { 0 };
+                hr = names->GetString(0, psName, 256);
+                
+                if (SUCCEEDED(hr) && wcscmp(psName, fontNameW) == 0) {
+                  // We found the requested font
+                  // Now check if it can render the string
+                  IDWriteFontFace *face = NULL;
+                  hr = font->CreateFontFace(&face);
+                  
+                  if (SUCCEEDED(hr)) {
+                    const size_t textLength = wcslen(wstr);
+                    UINT16 *glyphIndices = new UINT16[textLength];
+                    hr = face->GetGlyphIndices((UINT32*)wstr, textLength, glyphIndices);
+                    
+                    bool canDisplay = true;
+                    for (size_t k = 0; k < textLength; k++) {
+                      if (glyphIndices[k] == 0) { // 0 means no glyph
+                        canDisplay = false;
+                        break;
+                      }
+                    }
+                    
+                    if (canDisplay) {
+                      // Return the original font as it can render the string
+                      result = resultFromFont(font);
+                    }
+                    
+                    delete[] glyphIndices;
+                    face->Release();
+                  }
+                }
+                
+                names->Release();
+              }
+              
+              // If we already found a result, exit early
+              if (result) {
+                font->Release();
+                family->Release();
+                break;
+              }
+              
+              font->Release();
+            }
+          }
+          
+          family->Release();
+          if (result) break;
+        }
+      }
+    }
+    
+    // If we haven't found a suitable font yet, use the font fallback system
+    if (!result) {
+      // Create a text format to start with a default font
+      IDWriteTextFormat *textFormat = NULL;
+      hr = factory->CreateTextFormat(
+        L"Arial",
+        collection,
+        DWRITE_FONT_WEIGHT_NORMAL,
+        DWRITE_FONT_STYLE_NORMAL,
+        DWRITE_FONT_STRETCH_NORMAL,
+        12.0f,
+        L"en-us",
+        &textFormat
+      );
+      
+      if (SUCCEEDED(hr)) {
+        // Create a text layout for font fallback
+        IDWriteTextLayout *textLayout = NULL;
+        hr = factory->CreateTextLayout(
+          wstr,
+          wcslen(wstr),
+          textFormat,
+          1000.0f, // max width
+          100.0f,  // max height
+          &textLayout
+        );
+        
+        if (SUCCEEDED(hr)) {
+          // Get the font used for the first character (should be fallback if needed)
+          IDWriteFontCollection *actualCollection = NULL;
+          WCHAR fontName[256] = { 0 };
+          UINT32 nameLength = 0;
+          DWRITE_FONT_WEIGHT weight;
+          DWRITE_FONT_STYLE style;
+          DWRITE_FONT_STRETCH stretch;
+          float fontSize;
+          
+          hr = textLayout->GetFontCollection(0, &actualCollection);
+          if (SUCCEEDED(hr)) {
+            textLayout->GetFontFamilyName(0, fontName, 256);
+            textLayout->GetFontWeight(0, &weight);
+            textLayout->GetFontStyle(0, &style);
+            textLayout->GetFontStretch(0, &stretch);
+            textLayout->GetFontSize(0, &fontSize);
+            
+            // Find the font family
+            UINT32 familyIndex = 0;
+            BOOL familyExists = FALSE;
+            actualCollection->FindFamilyName(fontName, &familyIndex, &familyExists);
+            
+            if (familyExists) {
+              IDWriteFontFamily *family = NULL;
+              hr = actualCollection->GetFontFamily(familyIndex, &family);
+              
+              if (SUCCEEDED(hr)) {
+                // Find the specific font
+                IDWriteFont *font = NULL;
+                hr = family->GetFirstMatchingFont(
+                  weight,
+                  stretch,
+                  style,
+                  &font
+                );
+                
+                if (SUCCEEDED(hr)) {
+                  // Create descriptor for the fallback font
+                  result = resultFromFont(font);
+                  font->Release();
+                }
+                
+                family->Release();
+              }
+            }
+            
+            actualCollection->Release();
+          }
+          
+          textLayout->Release();
+        }
+        
+        textFormat->Release();
+      }
+    }
+    
+    collection->Release();
+  }
+  
+  // Cleanup
+  if (fontNameW) {
+    delete[] fontNameW;
+  }
+  
+  delete[] wstr;
+  factory->Release();
+  
+  return result;
+}
