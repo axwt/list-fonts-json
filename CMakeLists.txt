@@ -14,6 +14,9 @@ if(CMAKE_HOST_WIN32)
 	target_compile_definitions(list-fonts-json PRIVATE -D_CRT_SECURE_NO_WARNINGS)
 
 elseif(CMAKE_HOST_APPLE)
+  # Enable universal binary support (ARM64 and x86_64)
+  set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+  
   add_executable(list-fonts-json src/main.cc src/FontQuery.cc ${list-fonts-json_SOURCE_DIR}/src/FontManagerMac.mm)
   target_link_libraries(list-fonts-json
     "-framework CoreText"
